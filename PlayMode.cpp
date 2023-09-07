@@ -253,7 +253,8 @@ void PlayMode::update(float elapsed)
 */
 
 	constexpr float PlayerSpeed = 30.0f;
-	constexpr float BlockSpeed = 20.0f;
+	constexpr float BlockSpeed = 30.0f;
+	constexpr float ConvayorSpeed = 10.0f;
 	float DropSpeed = 50.0f;
 
 	// update block position
@@ -311,6 +312,12 @@ void PlayMode::update(float elapsed)
 				hp--;
 				show_current_hp();
 			}
+			else if (blocks[on_block_index].tag == "fragile")
+			{
+				fragile_index = blocks[on_block_index].index;
+				hp++;
+				show_current_hp();
+			}
 			else
 			{
 				hp++;
@@ -321,6 +328,7 @@ void PlayMode::update(float elapsed)
 		}
 		if (blocks[on_block_index].tag == "fragile")
 		{
+
 			if (fragile_timer < 35 && !fragiled)
 				fragile_timer++;
 			else
@@ -328,20 +336,19 @@ void PlayMode::update(float elapsed)
 				fragile_timer = 0;
 				fragiled = true;
 				// record position,respawn in same y
-				fragile_index = blocks[on_block_index].index;
-				fragiled_position.x = blocks[on_block_index].origin_position.x;
-				fragiled_position.y = blocks[on_block_index].origin_position.y;
+
+				fragiled_position.x = blocks[fragile_index].origin_position.x;
+				fragiled_position.y = blocks[fragile_index].origin_position.y;
 				// hide the block
-				blocks[on_block_index].color_index = 0;
-				blocks[on_block_index].tile_index = 0;
+				blocks[fragile_index].color_index = 0;
+				blocks[fragile_index].tile_index = 0;
 				// wait until it disappeared
 				player_at.y -= DropSpeed * elapsed * 2;
 			}
 		}
 		else if (blocks[on_block_index].tag == "convayor")
 		{
-			hp++;
-			show_current_hp();
+			player_at.x += ConvayorSpeed * elapsed;
 		}
 		onblock = true;
 	}
@@ -362,11 +369,13 @@ void PlayMode::update(float elapsed)
 		{
 			// wait until it disappeared
 			// remove the block
-			array_remove();
-			// generate new one
-			add_block();
-			std::cout << "reload!!!!" << std::endl;
-			fragiled = false;
+			if (blocks[fragile_index].tag == "fragile")
+			{
+				array_remove();
+				// generate new one
+				add_block();
+				fragiled = false;
+			}
 		}
 	}
 
@@ -376,11 +385,13 @@ void PlayMode::update(float elapsed)
 	// set player moving boundary
 	if (player_at.x < 1)
 	{
+		player_at.x = 1;
 		if (right.pressed)
 			player_at.x += PlayerSpeed * elapsed;
 	}
 	else if (player_at.x > 185)
 	{
+		player_at.x = 185;
 		if (left.pressed)
 			player_at.x -= PlayerSpeed * elapsed;
 	}
@@ -589,19 +600,19 @@ void PlayMode::show_current_hp()
 
 void PlayMode::array_remove()
 {
-	if (on_block_index < blocks.size() - 1)
+	if (fragile_index < blocks.size() - 1)
 	{
-		for (int i = on_block_index; i < blocks.size() - 1; i++)
+		for (int i = fragile_index; i < blocks.size() - 1; i++)
 		{
-			blocks[on_block_index] = blocks[on_block_index + 1];
-			block_positions[on_block_index] = block_positions[on_block_index + 1];
+			blocks[fragile_index] = blocks[fragile_index + 1];
+			block_positions[fragile_index] = block_positions[fragile_index + 1];
 		}
 	}
 }
 void PlayMode::add_block()
 {
 	Block block;
-	block.index = fragile_index;
+	block.index = 7;
 	block.origin_position.x = ranNum(0, 160);
 	block.origin_position.y = fragiled_position.y;
 	blocks[7].origin_position.x = block.origin_position.x;
