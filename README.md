@@ -1,4 +1,4 @@
-# (NS-SHIFT)
+# NS-SHIFT
 
 Author: Yue Wang
 
