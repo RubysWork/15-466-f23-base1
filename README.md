@@ -24,7 +24,7 @@ Iterate the png_data again, record the location of each pixel base on color. Til
 
 **STEP5 Draw**
 Use ppu.background[x + PPU466::BackgroundWidth * y] = 0b0000000000000000 to draw background, use ppu.background_position to decide the background position.
-Use ppu.sprites to draw sprites.
+Use ppu.sprites to draw sprites. My blocks can't just be 8x8 pixels, overwise it would be too small. So I drew 4 consecutive block sprites as a complete block, and put them in a array to move them more convenience.
 
 see my fancy character: [link](data/)
 
