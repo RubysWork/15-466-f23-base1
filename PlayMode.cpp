@@ -121,6 +121,8 @@ PlayMode::PlayMode()
 	create_tile_palette_table(data_path("../data/Block.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 3, 3);
 
 	assign_blocks();
+	std::cout << "Welcome to play NS-SHAFT!" << std::endl;
+	std::cout << "current Floor:" << score << std::endl;
 }
 
 PlayMode::~PlayMode()
@@ -244,28 +246,39 @@ void PlayMode::update(float elapsed)
 */
 
 	constexpr float PlayerSpeed = 30.0f;
-	constexpr float BlockSpeed = 10.0f;
+	constexpr float BlockSpeed = 20.0f;
 	float DropSpeed = 50.0f;
 
+	// update block position
 	for (int i = 0; i < block_positions.size(); i++)
 	{
 		block_positions[i].x = blocks[i].origin_position.x;
 		block_positions[i].y = blocks[i].origin_position.y + block_at.y;
+
 		if (block_positions[i].y > 240)
+		{
 			block_positions[i].y = (float)((int)block_positions[i].y % 240);
+		}
 	}
 
+	// game over
 	if (player_at.y < 0)
+	{
 		player_at.y = (float)(240 + ((int8_t)player_at.y % 240));
+		std::cout << " Game Over! Your final floor is:" << score << std::endl;
+		std::cout << " Thank you for playing!" << std::endl;
+		system("pause");
+	}
+	// drop off from the top
 	else if (player_at.y > 240)
 	{
-		player_at.y -= 8; // drop off
+		player_at.y -= 8;
 	}
 
 	// if player is right on the block, the player will stop falling
 	for (int i = 0; i < blocks.size(); i++)
 	{
-		if (player_at.x >= blocks[i].origin_position.x + block_at.x - 4 && player_at.x <= blocks[i].origin_position.x + block_at.x + 36 && player_at.y >= block_positions[i].y && player_at.y <= block_positions[i].y + 8)
+		if (player_at.x >= block_positions[i].x - 2 && player_at.x <= block_positions[i].x + 34 && player_at.y >= block_positions[i].y && player_at.y <= block_positions[i].y + 8)
 		{
 			blocks[i].onblock = true;
 		}
@@ -316,6 +329,16 @@ void PlayMode::update(float elapsed)
 	right.downs = 0;
 	// up.downs = 0;
 	// down.downs = 0;
+
+	timer++;
+	// std::cout << "timer:" << timer << std::endl;
+
+	if (timer > 1323)
+	{
+		score++;
+		std::cout << "current Floor:" << score << std::endl;
+		timer = 0;
+	}
 };
 
 void PlayMode::draw(glm::uvec2 const &drawable_size)

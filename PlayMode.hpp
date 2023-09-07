@@ -53,7 +53,12 @@ struct PlayMode : Mode
 
 	} Block;
 
+	//---------
 	// blocks on the screen
 	std::array<Block, 8> blocks;
+
 	std::array<glm::vec2, 8> block_positions;
+
+	int score = 0;
+	int timer = 0;
 };
