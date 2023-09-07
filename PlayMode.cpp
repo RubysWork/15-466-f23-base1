@@ -119,9 +119,16 @@ PlayMode::PlayMode()
 	create_tile_palette_table(data_path("../data/Player.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 2, 2);
 	// block
 	create_tile_palette_table(data_path("../data/Block.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 3, 3);
+	// spike
+	create_tile_palette_table(data_path("../data/Spike.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 4, 4);
+	// fragile
+	create_tile_palette_table(data_path("../data/Fragile.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 5, 5);
+	// convayor
+	create_tile_palette_table(data_path("../data/Convayor.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 6, 6);
 
 	assign_blocks();
 	std::cout << "Welcome to play NS-SHAFT!" << std::endl;
+	show_current_hp();
 	std::cout << "current Floor:" << score << std::endl;
 }
 
@@ -265,13 +272,14 @@ void PlayMode::update(float elapsed)
 	if (player_at.y < 0)
 	{
 		player_at.y = (float)(240 + ((int8_t)player_at.y % 240));
-		std::cout << " Game Over! Your final floor is:" << score << std::endl;
-		std::cout << " Thank you for playing!" << std::endl;
-		system("pause");
+		game_over();
 	}
 	// drop off from the top
 	else if (player_at.y > 240)
 	{
+		hp--;
+
+		show_current_hp();
 		player_at.y -= 8;
 	}
 
@@ -281,6 +289,7 @@ void PlayMode::update(float elapsed)
 		if (player_at.x >= block_positions[i].x - 2 && player_at.x <= block_positions[i].x + 34 && player_at.y >= block_positions[i].y && player_at.y <= block_positions[i].y + 8)
 		{
 			blocks[i].onblock = true;
+			on_block_index = i;
 		}
 		else
 		{
@@ -290,13 +299,75 @@ void PlayMode::update(float elapsed)
 	// std::cout << "player:(" << player_at.x << "," << player_at.y << ")" << std::endl;
 	// std::cout << "block_at:(" << block_positions[6].x << "," << block_positions[6].y << ")" << std::endl;
 
+	// block events
 	if (blocks[0].onblock || blocks[1].onblock || blocks[2].onblock || blocks[3].onblock || blocks[4].onblock || blocks[5].onblock || blocks[6].onblock || blocks[7].onblock)
 	{ // if player is on the block, the player move with the block
 		player_at.y += BlockSpeed * elapsed;
+
+		if (isOnBlockMoment)
+		{
+			if (blocks[on_block_index].tag == "spike")
+			{
+				hp--;
+				show_current_hp();
+			}
+			else
+			{
+				hp++;
+				show_current_hp();
+			}
+
+			isOnBlockMoment = false;
+		}
+		if (blocks[on_block_index].tag == "fragile")
+		{
+			if (fragile_timer < 35 && !fragiled)
+				fragile_timer++;
+			else
+			{
+				fragile_timer = 0;
+				fragiled = true;
+				// record position,respawn in same y
+				fragile_index = blocks[on_block_index].index;
+				fragiled_position.x = blocks[on_block_index].origin_position.x;
+				fragiled_position.y = blocks[on_block_index].origin_position.y;
+				// hide the block
+				blocks[on_block_index].color_index = 0;
+				blocks[on_block_index].tile_index = 0;
+				// wait until it disappeared
+				player_at.y -= DropSpeed * elapsed * 2;
+			}
+		}
+		else if (blocks[on_block_index].tag == "convayor")
+		{
+			hp++;
+			show_current_hp();
+		}
+		onblock = true;
 	}
 	else
 	{ // player keep falling
 		player_at.y -= DropSpeed * elapsed;
+		if (onblock)
+		{
+			isOnBlockMoment = true;
+			onblock = false;
+		}
+	}
+
+	// when fragile disappeared, remove and reload block
+	if (fragiled)
+	{
+		if (block_positions[fragile_index].y > 238 || block_positions[fragile_index].y < 2)
+		{
+			// wait until it disappeared
+			// remove the block
+			array_remove();
+			// generate new one
+			add_block();
+			std::cout << "reload!!!!" << std::endl;
+			fragiled = false;
+		}
 	}
 
 	// block moving
@@ -413,8 +484,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size)
 		{
 			ppu.sprites[j + i * 4].x = int8_t(block_positions[i].x + block_offset * (j - 1));
 			ppu.sprites[j + i * 4].y = int8_t(block_positions[i].y);
-			ppu.sprites[j + i * 4].index = 3;	   // color
-			ppu.sprites[j + i * 4].attributes = 3; // tile
+			ppu.sprites[j + i * 4].index = uint8_t(blocks[i].color_index);	   // color
+			ppu.sprites[j + i * 4].attributes = uint8_t(blocks[i].tile_index); // tile
 		}
 	}
 	/*
@@ -462,7 +533,114 @@ void PlayMode::assign_blocks()
 		block.index = i;
 		block.origin_position.x = ranNum(0, 160); // every time the random results are same??
 		block.origin_position.y = ranNum(i * 30, (i + 1) * 30 - 8);
+		block.tag = random_tag();
+		if (block.tag == "block")
+		{
+			block.color_index = 3;
+			block.tile_index = 3;
+		}
+		else if (block.tag == "spike")
+		{
+			block.color_index = 4;
+			block.tile_index = 4;
+		}
+		else if (block.tag == "fragile")
+		{
+			block.color_index = 5;
+			block.tile_index = 5;
+		}
+		else if (block.tag == "convayor")
+		{
+			block.color_index = 6;
+			block.tile_index = 6;
+		}
 		// std::cout << "i= " << i << " y: " << block.origin_position.y << std::endl;
 		blocks[i] = block;
 	};
+	// for (int i = 0; i < (int)ranNum(0, 7); i++)
+	// {
+	// 	blocks[(int)ranNum(0, 7)].tag = "fragile";
+	// 	blocks[(int)ranNum(0, 7)].tag = "convayor";
+	// 	blocks[(int)ranNum(0, 7)].tag = "spike";
+	// }
+}
+
+void PlayMode::game_over()
+{
+	std::cout << " Game Over! Your final floor is:" << score << std::endl;
+	std::cout << " Thank you for playing!" << std::endl;
+	system("pause");
+}
+
+void PlayMode::show_current_hp()
+{
+	if (hp > 10)
+		hp = 10;
+	if (hp <= 0)
+		game_over();
+	std::string life = "";
+	for (int i = 0; i < hp; i++)
+	{
+		life += "*";
+	}
+
+	std::cout << "current HP: " << life << std::endl;
+}
+
+void PlayMode::array_remove()
+{
+	if (on_block_index < blocks.size() - 1)
+	{
+		for (int i = on_block_index; i < blocks.size() - 1; i++)
+		{
+			blocks[on_block_index] = blocks[on_block_index + 1];
+			block_positions[on_block_index] = block_positions[on_block_index + 1];
+		}
+	}
+}
+void PlayMode::add_block()
+{
+	Block block;
+	block.index = fragile_index;
+	block.origin_position.x = ranNum(0, 160);
+	block.origin_position.y = fragiled_position.y;
+	blocks[7].origin_position.x = block.origin_position.x;
+	blocks[7].origin_position.y = block.origin_position.y;
+	block.tag = random_tag();
+	if (block.tag == "block")
+	{
+		block.color_index = 3;
+		block.tile_index = 3;
+	}
+	else if (block.tag == "spike")
+	{
+		block.color_index = 4;
+		block.tile_index = 4;
+	}
+	else if (block.tag == "fragile")
+	{
+		block.color_index = 5;
+		block.tile_index = 5;
+	}
+	else if (block.tag == "convayor")
+	{
+		block.color_index = 6;
+		block.tile_index = 6;
+	}
+	// std
+	// std::cout << "i= " << i << " y: " << block.origin_position.y << std::endl;
+	blocks[7] = block;
+}
+
+std::string PlayMode::random_tag()
+{
+	int r = (int)ranNum(0, 7);
+	if (r < 3)
+		return "block";
+	else if (r < 5)
+		return "spike";
+	else if (r < 7)
+		return "fragile";
+	else
+		return "convayor";
 }
