@@ -26,8 +26,7 @@ Iterate the png_data again, record the location of each pixel base on color. Til
 Use ppu.background[x + PPU466::BackgroundWidth * y] = 0b0000000000000000 to draw background, use ppu.background_position to decide the background position.
 Use ppu.sprites to draw sprites.
 
-png assets link: [link](data/)
-(TODO: make sure the source files you drew are included. You can [link](your/file.png) to them to be a bit fancier.)
+see my fancy character: [link](data/)
 
 How To Play:
 
