@@ -1,13 +1,17 @@
 #pragma once
 
+#include "load_save_png.hpp"
+
 #include <SDL.h>
 #include <glm/glm.hpp>
-
+#include <string>
 #include <memory>
 
 struct Mode : std::enable_shared_from_this< Mode > {
 	virtual ~Mode() { }
 
+	//load png and storage in data
+	virtual void create_tile_palette_table(std::string filename, glm::uvec2 &size, std::vector< glm::u8vec4 > &data, OriginLocation origin,int palette_index,int tile_index) {};
 	//handle_event is called when new mouse or keyboard events are received:
 	// (note that this might be many times per frame or never)
 	//The function should return 'true' if it handled the event.

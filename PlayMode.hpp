@@ -1,8 +1,8 @@
 #include "PPU466.hpp"
 #include "Mode.hpp"
-
+#include "load_save_png.hpp"
 #include <glm/glm.hpp>
-
+#include <string>
 #include <vector>
 #include <deque>
 
@@ -11,6 +11,9 @@ struct PlayMode : Mode {
 	virtual ~PlayMode();
 
 	//functions called by main loop:
+	virtual void create_tile_palette_table(std::string filename, glm::uvec2 &size, std::vector< glm::u8vec4 > &data, OriginLocation origin,int palette_index,int tile_index) override;
+
+
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
