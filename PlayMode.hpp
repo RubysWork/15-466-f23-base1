@@ -17,7 +17,9 @@ struct PlayMode : Mode
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
-	virtual int8_t ranNum(int min, int max);
+	virtual float ranNum(int min, int max);
+
+	virtual void assign_blocks();
 
 	//----- game state -----
 
@@ -30,9 +32,9 @@ struct PlayMode : Mode
 
 	// some weird background animation:
 	// float background_fade = 0.0f;
-
+	int8_t block_offset = 8;
 	// block position:
-	glm::vec2 block_at = glm::vec2(74, 120);
+	glm::vec2 block_at = glm::vec2(0, 0);
 
 	// player position:
 	glm::vec2 player_at = glm::vec2(90, 180);
@@ -42,10 +44,16 @@ struct PlayMode : Mode
 	PPU466 ppu;
 
 	//----- object ----
-	struct Block
+	typedef struct Block
 	{
 		int index;
-		glm::vec2 position;
-		std::array<PPU466::Sprite, 4> sprites;
-	};
+		glm::vec2 origin_position;
+		bool onblock;
+		// std::array<PPU466::Sprite, 4> sprites;
+
+	} Block;
+
+	// blocks on the screen
+	std::array<Block, 8> blocks;
+	std::array<glm::vec2, 8> block_positions;
 };

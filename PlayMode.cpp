@@ -7,6 +7,7 @@
 
 // for glm::value_ptr() :
 #include <glm/gtc/type_ptr.hpp>
+#include <stdlib.h>
 #include <string>
 #include <vector>
 #include <random>
@@ -119,7 +120,7 @@ PlayMode::PlayMode()
 	// block
 	create_tile_palette_table(data_path("../data/Block.png"), data_size, png_data, OriginLocation::LowerLeftOrigin, 3, 3);
 
-	// Block *block = new Block();
+	assign_blocks();
 }
 
 PlayMode::~PlayMode()
@@ -241,38 +242,72 @@ void PlayMode::update(float elapsed)
 	background_fade += elapsed / 10.0f;
 	background_fade -= std::floor(background_fade);
 */
+
 	constexpr float PlayerSpeed = 30.0f;
 	constexpr float BlockSpeed = 10.0f;
 	float DropSpeed = 50.0f;
 
+	for (int i = 0; i < block_positions.size(); i++)
+	{
+		block_positions[i].x = blocks[i].origin_position.x;
+		block_positions[i].y = blocks[i].origin_position.y + block_at.y;
+		if (block_positions[i].y > 240)
+			block_positions[i].y = (float)((int)block_positions[i].y % 240);
+	}
+
 	if (player_at.y < 0)
 		player_at.y = (float)(240 + ((int8_t)player_at.y % 240));
-
-	if (block_at.y > 240)
-		block_at.y = (float)((int8_t)block_at.y % 240);
-
-	std::cout << "player:(" << player_at.x << "," << player_at.y << ")" << std::endl;
-	std::cout << "block_at:(" << block_at.x << "," << block_at.y << ")" << std::endl;
+	else if (player_at.y > 240)
+	{
+		player_at.y -= 8; // drop off
+	}
 
 	// if player is right on the block, the player will stop falling
-	if (player_at.x >= block_at.x - 4 && player_at.x <= block_at.x + 36 && player_at.y >= block_at.y && player_at.y <= block_at.y + 8)
+	for (int i = 0; i < blocks.size(); i++)
 	{
-		// if player is on the block, the player move with the block
+		if (player_at.x >= blocks[i].origin_position.x + block_at.x - 4 && player_at.x <= blocks[i].origin_position.x + block_at.x + 36 && player_at.y >= block_positions[i].y && player_at.y <= block_positions[i].y + 8)
+		{
+			blocks[i].onblock = true;
+		}
+		else
+		{
+			blocks[i].onblock = false;
+		}
+	}
+	// std::cout << "player:(" << player_at.x << "," << player_at.y << ")" << std::endl;
+	// std::cout << "block_at:(" << block_positions[6].x << "," << block_positions[6].y << ")" << std::endl;
+
+	if (blocks[0].onblock || blocks[1].onblock || blocks[2].onblock || blocks[3].onblock || blocks[4].onblock || blocks[5].onblock || blocks[6].onblock || blocks[7].onblock)
+	{ // if player is on the block, the player move with the block
 		player_at.y += BlockSpeed * elapsed;
 	}
 	else
-	{
-		// player keep falling
+	{ // player keep falling
 		player_at.y -= DropSpeed * elapsed;
 	}
 
 	// block moving
 	block_at.y += BlockSpeed * elapsed;
 
-	if (left.pressed)
-		player_at.x -= PlayerSpeed * elapsed;
-	if (right.pressed)
-		player_at.x += PlayerSpeed * elapsed;
+	// set player moving boundary
+	if (player_at.x < 1)
+	{
+		if (right.pressed)
+			player_at.x += PlayerSpeed * elapsed;
+	}
+	else if (player_at.x > 185)
+	{
+		if (left.pressed)
+			player_at.x -= PlayerSpeed * elapsed;
+	}
+	else
+	{
+		if (left.pressed)
+			player_at.x -= PlayerSpeed * elapsed;
+		if (right.pressed)
+			player_at.x += PlayerSpeed * elapsed;
+	}
+
 	// if (down.pressed) player_at.y -= PlayerSpeed * elapsed;
 	// if (up.pressed) player_at.y += PlayerSpeed * elapsed;
 
@@ -344,54 +379,40 @@ void PlayMode::draw(glm::uvec2 const &drawable_size)
 	}
 
 	ppu.background_position.x = 0;
+	// ppu.background_position.y = int32_t(-0.5f * player_at.y);
 	ppu.background_position.y = int32_t(-0.5f * player_at.y);
 
-	// block sprite:
-	// random generated
-	/*
-	Block *block = new Block();
-	block->block_position.x = int8_t(block_at.x);
-	block->block_position.y = int8_t(block_at.y);
-	block->color_index = 3;
-	block->tile_index = 3;
-	block->drawBlock();
-	*/
-	int8_t block_offset = 8;
-
-	std::array<std::array<PPU466::Sprite, 4>, 8> blocks;
-	for (int i = 0; i < 8; i++)
+	// generate one block
+	for (int i = 0; i < blocks.size(); i++)
 	{
-		Block block;
-		for (int j = 0; j < 4; j++)
+		// 4blockbitmaps combine 1 block
+		for (int j = 1; j < 5; j++)
 		{
-			block.index = i;
-			block.position = (glm::vec2)(ranNum(0, 135), ranNum(0, 240));
-			block.sprites[j] = ppu.sprites[j + 1 + i * 4];
+			ppu.sprites[j + i * 4].x = int8_t(block_positions[i].x + block_offset * (j - 1));
+			ppu.sprites[j + i * 4].y = int8_t(block_positions[i].y);
+			ppu.sprites[j + i * 4].index = 3;	   // color
+			ppu.sprites[j + i * 4].attributes = 3; // tile
 		}
-
-		blocks[i] = block.sprites;
 	}
-
-	// std::cout << "blocks" << blocks[0][0].x << "," << blocks[1][0].x << std::endl;
-	//  for()
-
-	ppu.sprites[1].x = int8_t(block_at.x);
-	ppu.sprites[1].y = int8_t(block_at.y);
-	ppu.sprites[1].index = 3;	   // color
-	ppu.sprites[1].attributes = 3; // tile
-	ppu.sprites[2].x = int8_t(block_at.x + block_offset);
-	ppu.sprites[2].y = int8_t(block_at.y);
-	ppu.sprites[2].index = 3;	   // color
-	ppu.sprites[2].attributes = 3; // tile
-	ppu.sprites[3].x = int8_t(block_at.x + block_offset * 2);
-	ppu.sprites[3].y = int8_t(block_at.y);
-	ppu.sprites[3].index = 3;	   // color
-	ppu.sprites[3].attributes = 3; // tile
-	ppu.sprites[4].x = int8_t(block_at.x + block_offset * 3);
-	ppu.sprites[4].y = int8_t(block_at.y);
-	ppu.sprites[4].index = 3;	   // color
-	ppu.sprites[4].attributes = 3; // tile
-
+	/*
+	//basic way to draw block
+		// ppu.sprites[1].x = int8_t(block_at.x);
+		// 	ppu.sprites[1].y = int8_t(block_at.y);
+		// 	ppu.sprites[1].index = 3;	   // color
+		// 	ppu.sprites[1].attributes = 3; // tile
+		// 	ppu.sprites[2].x = int8_t(block_at.x + block_offset);
+		// 	ppu.sprites[2].y = int8_t(block_at.y);
+		// 	ppu.sprites[2].index = 3;	   // color
+		// 	ppu.sprites[2].attributes = 3; // tile
+		// 	ppu.sprites[3].x = int8_t(block_at.x + block_offset * 2);
+		// 	ppu.sprites[3].y = int8_t(block_at.y);
+		// 	ppu.sprites[3].index = 3;	   // color
+		// 	ppu.sprites[3].attributes = 3; // tile
+		// 	ppu.sprites[4].x = int8_t(block_at.x + block_offset * 3);
+		// 	ppu.sprites[4].y = int8_t(block_at.y);
+		// 	ppu.sprites[4].index = 3;	   // color
+		// 	ppu.sprites[4].attributes = 3; // tile
+	*/
 	// player sprite:
 	ppu.sprites[0].x = int8_t(player_at.x);
 	ppu.sprites[0].y = int8_t(player_at.y);
@@ -402,8 +423,23 @@ void PlayMode::draw(glm::uvec2 const &drawable_size)
 	ppu.draw(drawable_size);
 }
 
-int8_t PlayMode::ranNum(int min, int max)
+float PlayMode::ranNum(int min, int max)
 {
-	int8_t randomX = int8_t(rand() % (max - min + 1));
+	float randomX = (float)abs((rand() % (max - min + 1)) + min);
+	// std::cout << "min= " << min << " max: " << max << " random: " << randomX << std::endl;
 	return randomX;
+}
+
+void PlayMode::assign_blocks()
+{
+
+	for (int i = 0; i < blocks.size(); i++)
+	{
+		Block block;
+		block.index = i;
+		block.origin_position.x = ranNum(0, 160); // every time the random results are same??
+		block.origin_position.y = ranNum(i * 30, (i + 1) * 30 - 8);
+		// std::cout << "i= " << i << " y: " << block.origin_position.y << std::endl;
+		blocks[i] = block;
+	};
 }
